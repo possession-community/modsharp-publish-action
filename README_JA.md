@@ -464,6 +464,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create "${GITHUB_REF_NAME}" \
+            --repo "${GITHUB_REPOSITORY}" \
             --title "Release ${GITHUB_REF_NAME}" \
             --generate-notes \
             artifacts/*.zip
@@ -498,6 +499,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create "${GITHUB_REF_NAME}" \
+            --repo "${GITHUB_REPOSITORY}" \
             --title "Release ${GITHUB_REF_NAME}" \
             --generate-notes \
             artifacts/*.zip
