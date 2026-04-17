@@ -1,0 +1,38 @@
+# DLLs provided by the ModSharp runtime — safe to strip from plugin outputs.
+# Format: one DLL filename per line. Lines starting with # and blank lines are ignored.
+
+Google.Protobuf.dll
+McMaster.NETCore.Plugins.dll
+
+# Microsoft.Extensions.*
+Microsoft.Extensions.Configuration.dll
+Microsoft.Extensions.Configuration.Abstractions.dll
+Microsoft.Extensions.Configuration.Binder.dll
+Microsoft.Extensions.Configuration.FileExtensions.dll
+Microsoft.Extensions.Configuration.Json.dll
+Microsoft.Extensions.DependencyInjection.dll
+Microsoft.Extensions.DependencyInjection.Abstractions.dll
+Microsoft.Extensions.Diagnostics.dll
+Microsoft.Extensions.Diagnostics.Abstractions.dll
+Microsoft.Extensions.FileProviders.Abstractions.dll
+Microsoft.Extensions.FileProviders.Physical.dll
+Microsoft.Extensions.FileSystemGlobbing.dll
+Microsoft.Extensions.Http.dll
+Microsoft.Extensions.Logging.dll
+Microsoft.Extensions.Logging.Abstractions.dll
+Microsoft.Extensions.Logging.Configuration.dll
+Microsoft.Extensions.Logging.Console.dll
+Microsoft.Extensions.Options.dll
+Microsoft.Extensions.Options.ConfigurationExtensions.dll
+Microsoft.Extensions.Primitives.dll
+
+# Serilog
+Serilog.dll
+Serilog.Extensions.Logging.dll
+Serilog.Sinks.Console.dll
+Serilog.Sinks.File.dll
+Serilog.Sinks.Async.dll
+Serilog.Expressions.dll
+
+# System
+System.Text.Json.dll

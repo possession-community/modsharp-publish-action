@@ -1,0 +1,4 @@
+# Force LF line endings for shell scripts and YAML so they work on Linux runners.
+*.sh   text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf

@@ -1,0 +1,324 @@
+name: ModSharp Plugin CI/CD
+
+on:
+  workflow_call:
+    inputs:
+      dotnet-version:
+        description: '.NET SDK version'
+        type: string
+        default: '10.0.x'
+      runs-on:
+        description: 'Runner label. Linux is preferred; dotnet publish cross-compiles to any -r target.'
+        type: string
+        default: 'ubuntu-latest'
+      platforms:
+        description: 'Target runtimes (-r), space/newline separated. Multiple values trigger matrix builds + artifact name suffixing.'
+        type: string
+        default: 'linux-x64'
+      target-framework:
+        description: 'Target framework moniker (-f)'
+        type: string
+        default: 'net10.0'
+      projects:
+        description: 'Main module projects (space or newline separated). Built to .build/modules/<name>'
+        type: string
+        default: ''
+      shared-projects-phase1:
+        description: 'Base shared projects. Built to .build/shared/<name>'
+        type: string
+        default: ''
+      shared-projects-phase2:
+        description: 'Shared projects depending on phase 1'
+        type: string
+        default: ''
+      build-only-shared-projects:
+        description: 'Shared projects built but not cleaned of ModSharp-provided DLLs'
+        type: string
+        default: ''
+      use-builtin-dlls-to-remove:
+        description: 'Load defaults/dlls-to-remove.txt from this repo as the base list (merged with user additions)'
+        type: boolean
+        default: true
+      dlls-to-remove:
+        description: 'Additional DLLs to remove (space/newline separated). Merged with builtin + file list.'
+        type: string
+        default: ''
+      dlls-to-remove-file:
+        description: 'Path (in caller repo) to a text file listing DLLs to remove — one per line, # comments allowed. Merged with dlls-to-remove.'
+        type: string
+        default: ''
+      shared-dlls-to-remove:
+        description: 'Shared DLLs removed from main module outputs (provided by shared directory)'
+        type: string
+        default: ''
+      shared-dlls-to-remove-file:
+        description: 'Path (in caller repo) to a text file listing shared DLLs to remove. Merged with shared-dlls-to-remove.'
+        type: string
+        default: ''
+      custom-dirs:
+        description: 'Directories at repo root to copy verbatim into each main module output'
+        type: string
+        default: ''
+      main-artifact-name:
+        description: 'Base name (no extension) for the primary zip. Platform suffix is appended automatically when multiple platforms are built.'
+        type: string
+        default: ''
+      main-artifact-include:
+        description: 'Paths under .build to include in the main zip (space/newline separated). Default is module layout.'
+        type: string
+        default: 'modules gamedata'
+      extended-artifact-name:
+        description: 'Optional zip name that bundles dependencies alongside main output'
+        type: string
+        default: ''
+      extended-artifact-include:
+        description: 'Paths under .build included in the extended zip'
+        type: string
+        default: 'shared modules gamedata'
+      dependencies:
+        description: 'Dependency zip URLs (one per line). Extracted into .build/ before producing the extended zip.'
+        type: string
+        default: ''
+      nuget-project-dirs:
+        description: 'Project directories (space/newline separated) to pack & push to NuGet. Empty skips NuGet.'
+        type: string
+        default: ''
+      nuget-config-props:
+        description: 'Path to props file containing <Version>. Relative to repo root.'
+        type: string
+        default: 'config.props'
+      no-ci-marker:
+        description: 'Commit message marker that skips the CI build'
+        type: string
+        default: '[no ci]'
+    secrets:
+      NUGET_API_KEY:
+        required: false
+
+jobs:
+  setup:
+    name: Setup
+    runs-on: ubuntu-latest
+    outputs:
+      platform-list: ${{ steps.parse.outputs.list }}
+      is-multi: ${{ steps.parse.outputs.is-multi }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve workflow repo
+        id: wfref
+        shell: bash
+        env:
+          WF_REF_FULL: ${{ github.workflow_ref }}
+        run: |
+          set -euo pipefail
+          IFS='@' read -r path ref <<< "$WF_REF_FULL"
+          repo=$(echo "$path" | cut -d'/' -f1-2)
+          echo "repo=$repo" >> "$GITHUB_OUTPUT"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout modsharp-deploy
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.wfref.outputs.repo }}
+          ref: ${{ steps.wfref.outputs.ref }}
+          path: .modsharp-deploy
+
+      - name: Parse platforms
+        id: parse
+        env:
+          MSD_PLATFORMS: ${{ inputs.platforms }}
+        run: bash .modsharp-deploy/scripts/parse-platforms.sh
+
+  build:
+    name: Build (CI) — ${{ matrix.platform }}
+    needs: setup
+    if: ${{ !startsWith(github.ref, 'refs/tags/') && !contains(github.event.head_commit.message, inputs.no-ci-marker) }}
+    runs-on: ${{ inputs.runs-on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(needs.setup.outputs.platform-list) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve workflow repo
+        id: wfref
+        shell: bash
+        env:
+          WF_REF_FULL: ${{ github.workflow_ref }}
+        run: |
+          set -euo pipefail
+          IFS='@' read -r path ref <<< "$WF_REF_FULL"
+          repo=$(echo "$path" | cut -d'/' -f1-2)
+          echo "repo=$repo" >> "$GITHUB_OUTPUT"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout modsharp-deploy
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.wfref.outputs.repo }}
+          ref: ${{ steps.wfref.outputs.ref }}
+          path: .modsharp-deploy
+
+      - name: Validate NuGet PackageIds
+        if: ${{ inputs.nuget-project-dirs != '' }}
+        env:
+          MSD_NUGET_PROJECT_DIRS: ${{ inputs.nuget-project-dirs }}
+        run: bash .modsharp-deploy/scripts/validate-packageids.sh
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        env:
+          MSD_PLATFORM: ${{ matrix.platform }}
+          MSD_TFM: ${{ inputs.target-framework }}
+          MSD_PROJECTS: ${{ inputs.projects }}
+          MSD_SHARED_P1: ${{ inputs.shared-projects-phase1 }}
+          MSD_SHARED_P2: ${{ inputs.shared-projects-phase2 }}
+          MSD_SHARED_BUILD_ONLY: ${{ inputs.build-only-shared-projects }}
+          MSD_DLLS_TO_REMOVE: ${{ inputs.dlls-to-remove }}
+          MSD_DLLS_TO_REMOVE_FILE: ${{ inputs.dlls-to-remove-file }}
+          MSD_BUILTIN_DLLS_FILE: ${{ inputs.use-builtin-dlls-to-remove && '.modsharp-deploy/defaults/dlls-to-remove.txt' || '' }}
+          MSD_SHARED_DLLS_TO_REMOVE: ${{ inputs.shared-dlls-to-remove }}
+          MSD_SHARED_DLLS_TO_REMOVE_FILE: ${{ inputs.shared-dlls-to-remove-file }}
+          MSD_CUSTOM_DIRS: ${{ inputs.custom-dirs }}
+        run: bash .modsharp-deploy/scripts/build.sh
+
+  publish:
+    name: Publish — ${{ matrix.platform }}
+    needs: setup
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    runs-on: ${{ inputs.runs-on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(needs.setup.outputs.platform-list) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve workflow repo
+        id: wfref
+        shell: bash
+        env:
+          WF_REF_FULL: ${{ github.workflow_ref }}
+        run: |
+          set -euo pipefail
+          IFS='@' read -r path ref <<< "$WF_REF_FULL"
+          repo=$(echo "$path" | cut -d'/' -f1-2)
+          echo "repo=$repo" >> "$GITHUB_OUTPUT"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout modsharp-deploy
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.wfref.outputs.repo }}
+          ref: ${{ steps.wfref.outputs.ref }}
+          path: .modsharp-deploy
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        env:
+          MSD_PLATFORM: ${{ matrix.platform }}
+          MSD_TFM: ${{ inputs.target-framework }}
+          MSD_PROJECTS: ${{ inputs.projects }}
+          MSD_SHARED_P1: ${{ inputs.shared-projects-phase1 }}
+          MSD_SHARED_P2: ${{ inputs.shared-projects-phase2 }}
+          MSD_SHARED_BUILD_ONLY: ${{ inputs.build-only-shared-projects }}
+          MSD_DLLS_TO_REMOVE: ${{ inputs.dlls-to-remove }}
+          MSD_DLLS_TO_REMOVE_FILE: ${{ inputs.dlls-to-remove-file }}
+          MSD_BUILTIN_DLLS_FILE: ${{ inputs.use-builtin-dlls-to-remove && '.modsharp-deploy/defaults/dlls-to-remove.txt' || '' }}
+          MSD_SHARED_DLLS_TO_REMOVE: ${{ inputs.shared-dlls-to-remove }}
+          MSD_SHARED_DLLS_TO_REMOVE_FILE: ${{ inputs.shared-dlls-to-remove-file }}
+          MSD_CUSTOM_DIRS: ${{ inputs.custom-dirs }}
+        run: bash .modsharp-deploy/scripts/build.sh
+
+      - name: Create main artifact
+        if: ${{ inputs.main-artifact-name != '' }}
+        env:
+          MSD_ZIP_NAME: ${{ needs.setup.outputs.is-multi == 'true' && format('{0}-{1}', inputs.main-artifact-name, matrix.platform) || inputs.main-artifact-name }}
+          MSD_ZIP_INCLUDE: ${{ inputs.main-artifact-include }}
+        run: bash .modsharp-deploy/scripts/create-zip.sh
+
+      - name: Download dependencies
+        if: ${{ inputs.extended-artifact-name != '' && inputs.dependencies != '' }}
+        env:
+          MSD_DEPENDENCIES: ${{ inputs.dependencies }}
+        run: bash .modsharp-deploy/scripts/download-dependencies.sh
+
+      - name: Create extended artifact
+        if: ${{ inputs.extended-artifact-name != '' }}
+        env:
+          MSD_ZIP_NAME: ${{ needs.setup.outputs.is-multi == 'true' && format('{0}-{1}', inputs.extended-artifact-name, matrix.platform) || inputs.extended-artifact-name }}
+          MSD_ZIP_INCLUDE: ${{ inputs.extended-artifact-include }}
+        run: bash .modsharp-deploy/scripts/create-zip.sh
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ needs.setup.outputs.is-multi == 'true' && format('release-artifacts-{0}', matrix.platform) || 'release-artifacts' }}
+          path: dist/*.zip
+          if-no-files-found: error
+
+  publish-nuget:
+    name: Publish NuGet
+    if: ${{ startsWith(github.ref, 'refs/tags/') && inputs.nuget-project-dirs != '' }}
+    needs: publish
+    runs-on: ${{ inputs.runs-on }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve workflow repo
+        id: wfref
+        shell: bash
+        env:
+          WF_REF_FULL: ${{ github.workflow_ref }}
+        run: |
+          set -euo pipefail
+          IFS='@' read -r path ref <<< "$WF_REF_FULL"
+          repo=$(echo "$path" | cut -d'/' -f1-2)
+          echo "repo=$repo" >> "$GITHUB_OUTPUT"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout modsharp-deploy
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.wfref.outputs.repo }}
+          ref: ${{ steps.wfref.outputs.ref }}
+          path: .modsharp-deploy
+
+      - name: Validate NuGet PackageIds
+        env:
+          MSD_NUGET_PROJECT_DIRS: ${{ inputs.nuget-project-dirs }}
+        run: bash .modsharp-deploy/scripts/validate-packageids.sh
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+
+      - name: Extract version
+        id: version
+        env:
+          MSD_PROPS_FILE: ${{ inputs.nuget-config-props }}
+        run: bash .modsharp-deploy/scripts/extract-version.sh
+
+      - name: Pack and push
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          MSD_NUGET_PROJECT_DIRS: ${{ inputs.nuget-project-dirs }}
+          MSD_VERSION: ${{ steps.version.outputs.version }}
+        run: bash .modsharp-deploy/scripts/pack-and-push.sh
