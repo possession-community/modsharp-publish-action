@@ -105,21 +105,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # NOTE: ref is hardcoded to the major version tag. When cutting a new
+      # major version, bump this in lockstep with the tag. github.workflow_sha
+      # and github.workflow_ref both refer to the CALLER in reusable workflow
+      # context, so we cannot auto-resolve the callee's ref.
       - name: Checkout modsharp-publish-action
         uses: actions/checkout@v4
         with:
           repository: fltuna/modsharp-publish-action
-          ref: ${{ github.workflow_sha }}
+          ref: v1
           path: .modsharp-deploy
-
-      - name: Verify scripts
-        shell: bash
-        run: |
-          if [[ ! -d .modsharp-deploy/scripts ]]; then
-            echo "::error::scripts directory missing. github.workflow_sha=${{ github.workflow_sha }}"
-            ls -la .modsharp-deploy/ || true
-            exit 1
-          fi
 
       - name: Parse platforms
         id: parse
@@ -139,21 +134,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # NOTE: ref is hardcoded to the major version tag. When cutting a new
+      # major version, bump this in lockstep with the tag. github.workflow_sha
+      # and github.workflow_ref both refer to the CALLER in reusable workflow
+      # context, so we cannot auto-resolve the callee's ref.
       - name: Checkout modsharp-publish-action
         uses: actions/checkout@v4
         with:
           repository: fltuna/modsharp-publish-action
-          ref: ${{ github.workflow_sha }}
+          ref: v1
           path: .modsharp-deploy
-
-      - name: Verify scripts
-        shell: bash
-        run: |
-          if [[ ! -d .modsharp-deploy/scripts ]]; then
-            echo "::error::scripts directory missing. github.workflow_sha=${{ github.workflow_sha }}"
-            ls -la .modsharp-deploy/ || true
-            exit 1
-          fi
 
       - name: Validate NuGet PackageIds
         if: ${{ inputs.nuget-project-dirs != '' }}
@@ -197,21 +187,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # NOTE: ref is hardcoded to the major version tag. When cutting a new
+      # major version, bump this in lockstep with the tag. github.workflow_sha
+      # and github.workflow_ref both refer to the CALLER in reusable workflow
+      # context, so we cannot auto-resolve the callee's ref.
       - name: Checkout modsharp-publish-action
         uses: actions/checkout@v4
         with:
           repository: fltuna/modsharp-publish-action
-          ref: ${{ github.workflow_sha }}
+          ref: v1
           path: .modsharp-deploy
-
-      - name: Verify scripts
-        shell: bash
-        run: |
-          if [[ ! -d .modsharp-deploy/scripts ]]; then
-            echo "::error::scripts directory missing. github.workflow_sha=${{ github.workflow_sha }}"
-            ls -la .modsharp-deploy/ || true
-            exit 1
-          fi
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -272,21 +257,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # NOTE: ref is hardcoded to the major version tag. When cutting a new
+      # major version, bump this in lockstep with the tag. github.workflow_sha
+      # and github.workflow_ref both refer to the CALLER in reusable workflow
+      # context, so we cannot auto-resolve the callee's ref.
       - name: Checkout modsharp-publish-action
         uses: actions/checkout@v4
         with:
           repository: fltuna/modsharp-publish-action
-          ref: ${{ github.workflow_sha }}
+          ref: v1
           path: .modsharp-deploy
-
-      - name: Verify scripts
-        shell: bash
-        run: |
-          if [[ ! -d .modsharp-deploy/scripts ]]; then
-            echo "::error::scripts directory missing. github.workflow_sha=${{ github.workflow_sha }}"
-            ls -la .modsharp-deploy/ || true
-            exit 1
-          fi
 
       - name: Validate NuGet PackageIds
         env:
