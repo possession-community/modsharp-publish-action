@@ -1,0 +1,82 @@
+name: Bump NuGet Package
+
+on:
+  workflow_call:
+    inputs:
+      package-id:
+        description: 'NuGet package ID to track (e.g. ModSharp.Sharp.Shared)'
+        type: string
+        required: true
+      csproj-paths:
+        description: 'csproj paths to update (newline-separated). Empty = all *.csproj in repo.'
+        type: string
+        default: ''
+      include-prerelease:
+        description: 'Consider prerelease versions'
+        type: boolean
+        default: false
+      base-branch:
+        description: 'Branch the PR targets'
+        type: string
+        default: 'main'
+      branch-prefix:
+        description: 'Prefix for the PR branch. Latest version is appended.'
+        type: string
+        default: 'chore/bump'
+      commit-prefix:
+        description: 'Prefix for the commit message and PR title (before "<pkg> from X to Y")'
+        type: string
+        default: 'chore: bump'
+      pr-labels:
+        description: 'Comma-separated labels to apply to the PR'
+        type: string
+        default: 'dependencies'
+      runs-on:
+        type: string
+        default: 'ubuntu-latest'
+    secrets:
+      PAT:
+        description: 'Optional PAT for opening the PR. Required if the bump PR should trigger other workflows (GITHUB_TOKEN-opened PRs do not).'
+        required: false
+
+jobs:
+  bump:
+    runs-on: ${{ inputs.runs-on }}
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # NOTE: ref is hardcoded to the major version tag. When cutting a new
+      # major version, bump this in lockstep with the tag.
+      - name: Fetch scripts
+        run: |
+          for s in bump-nuget.sh create-bump-pr.sh; do
+            curl -fsSL \
+              "https://raw.githubusercontent.com/fltuna/modsharp-publish-action/v1/scripts/$s" \
+              -o "$RUNNER_TEMP/$s"
+            chmod +x "$RUNNER_TEMP/$s"
+          done
+
+      - name: Check NuGet & update csproj
+        id: bump
+        env:
+          MSD_PACKAGE_ID: ${{ inputs.package-id }}
+          MSD_CSPROJ_PATHS: ${{ inputs.csproj-paths }}
+          MSD_INCLUDE_PRERELEASE: ${{ inputs.include-prerelease }}
+        run: bash "$RUNNER_TEMP/bump-nuget.sh"
+
+      - name: Create Pull Request
+        if: ${{ steps.bump.outputs.updated == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.PAT || github.token }}
+          MSD_BASE_BRANCH: ${{ inputs.base-branch }}
+          MSD_BRANCH_PREFIX: ${{ inputs.branch-prefix }}
+          MSD_COMMIT_PREFIX: ${{ inputs.commit-prefix }}
+          MSD_PACKAGE_ID: ${{ inputs.package-id }}
+          MSD_CURRENT_VERSION: ${{ steps.bump.outputs.current-version }}
+          MSD_LATEST_VERSION: ${{ steps.bump.outputs.latest-version }}
+          MSD_PR_LABELS: ${{ inputs.pr-labels }}
+          MSD_FILES_CHANGED: ${{ steps.bump.outputs.files-changed }}
+        run: bash "$RUNNER_TEMP/create-bump-pr.sh"

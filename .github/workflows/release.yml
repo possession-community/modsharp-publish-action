@@ -1,0 +1,65 @@
+name: Release (Version Bump + Tag)
+
+on:
+  workflow_call:
+    inputs:
+      bump-type:
+        description: 'patch | minor | major'
+        type: string
+        required: true
+      version-file:
+        description: 'Path to props file containing <Version>'
+        type: string
+        default: 'config.props'
+      tag-prefix:
+        description: 'Tag prefix (e.g. "v" produces v1.2.3)'
+        type: string
+        default: 'v'
+      target-branch:
+        description: 'Branch to commit the version bump to'
+        type: string
+        default: 'main'
+      runs-on:
+        type: string
+        default: 'ubuntu-latest'
+    secrets:
+      PAT:
+        description: 'PAT for pushing commit + tag. Required if the tag push should trigger the CI/CD workflow (GITHUB_TOKEN-pushed tags do not fire other workflows).'
+        required: false
+
+jobs:
+  release:
+    runs-on: ${{ inputs.runs-on }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT || github.token }}
+          ref: ${{ inputs.target-branch }}
+          fetch-depth: 0
+
+      # NOTE: ref is hardcoded to the major version tag. When cutting a new
+      # major version, bump this in lockstep with the tag.
+      - name: Fetch scripts
+        run: |
+          for s in bump-version.sh tag-and-push.sh; do
+            curl -fsSL \
+              "https://raw.githubusercontent.com/fltuna/modsharp-publish-action/v1/scripts/$s" \
+              -o "$RUNNER_TEMP/$s"
+            chmod +x "$RUNNER_TEMP/$s"
+          done
+
+      - name: Bump <Version>
+        id: bump
+        env:
+          MSD_VERSION_FILE: ${{ inputs.version-file }}
+          MSD_BUMP_TYPE: ${{ inputs.bump-type }}
+        run: bash "$RUNNER_TEMP/bump-version.sh"
+
+      - name: Commit, tag & push
+        env:
+          MSD_VERSION_FILE: ${{ inputs.version-file }}
+          MSD_NEW_VERSION: ${{ steps.bump.outputs.new-version }}
+          MSD_TAG_PREFIX: ${{ inputs.tag-prefix }}
+        run: bash "$RUNNER_TEMP/tag-and-push.sh"
