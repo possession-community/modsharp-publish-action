@@ -54,7 +54,7 @@ jobs:
         run: |
           for s in bump-nuget.sh create-bump-pr.sh; do
             curl -fsSL \
-              "https://raw.githubusercontent.com/fltuna/modsharp-publish-action/v1/scripts/$s" \
+              "https://raw.githubusercontent.com/possession-community/modsharp-publish-action/v1/scripts/$s" \
               -o "$RUNNER_TEMP/$s"
             chmod +x "$RUNNER_TEMP/$s"
           done

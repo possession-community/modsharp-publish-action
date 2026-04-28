@@ -103,7 +103,7 @@ on:
 
 jobs:
   cicd:
-    uses: fltuna/modsharp-publish-action/.github/workflows/deploy.yml@v1
+    uses: possession-community/modsharp-publish-action/.github/workflows/deploy.yml@v1
     with:
       projects: MyPlugin
       main-artifact-name: MyPlugin
@@ -125,7 +125,7 @@ on:
 
 jobs:
   cicd:
-    uses: fltuna/modsharp-publish-action/.github/workflows/deploy.yml@v1
+    uses: possession-community/modsharp-publish-action/.github/workflows/deploy.yml@v1
     with:
       projects: MyPlugin
       platforms: linux-x64 win-x64
@@ -150,7 +150,7 @@ on:
 
 jobs:
   cicd:
-    uses: fltuna/modsharp-publish-action/.github/workflows/deploy.yml@v1
+    uses: possession-community/modsharp-publish-action/.github/workflows/deploy.yml@v1
     with:
       projects: TnmsPluginFoundation.Example
       shared-projects-phase1: TnmsPluginFoundation
@@ -196,7 +196,7 @@ on:
 
 jobs:
   cicd:
-    uses: fltuna/modsharp-publish-action/.github/workflows/deploy.yml@v1
+    uses: possession-community/modsharp-publish-action/.github/workflows/deploy.yml@v1
     with:
       projects: |
         PluginA
@@ -447,7 +447,7 @@ This workflow stops at artifact upload. Add a separate release job in your calle
 ```yaml
 jobs:
   cicd:
-    uses: fltuna/modsharp-publish-action/.github/workflows/deploy.yml@v1
+    uses: possession-community/modsharp-publish-action/.github/workflows/deploy.yml@v1
     with:
       projects: MyPlugin
       main-artifact-name: MyPlugin
@@ -480,7 +480,7 @@ Use `pattern:` + `merge-multiple: true` to download every matrix entry:
 ```yaml
 jobs:
   cicd:
-    uses: fltuna/modsharp-publish-action/.github/workflows/deploy.yml@v1
+    uses: possession-community/modsharp-publish-action/.github/workflows/deploy.yml@v1
     with:
       projects: MyPlugin
       platforms: linux-x64 win-x64

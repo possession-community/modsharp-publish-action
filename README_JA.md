@@ -100,7 +100,7 @@ on:
 
 jobs:
   cicd:
-    uses: fltuna/modsharp-publish-action/.github/workflows/deploy.yml@v1
+    uses: possession-community/modsharp-publish-action/.github/workflows/deploy.yml@v1
     with:
       projects: MyPlugin
       main-artifact-name: MyPlugin
@@ -122,7 +122,7 @@ on:
 
 jobs:
   cicd:
-    uses: fltuna/modsharp-publish-action/.github/workflows/deploy.yml@v1
+    uses: possession-community/modsharp-publish-action/.github/workflows/deploy.yml@v1
     with:
       projects: MyPlugin
       platforms: linux-x64 win-x64
@@ -147,7 +147,7 @@ on:
 
 jobs:
   cicd:
-    uses: fltuna/modsharp-publish-action/.github/workflows/deploy.yml@v1
+    uses: possession-community/modsharp-publish-action/.github/workflows/deploy.yml@v1
     with:
       projects: TnmsPluginFoundation.Example
       shared-projects-phase1: TnmsPluginFoundation
@@ -193,7 +193,7 @@ on:
 
 jobs:
   cicd:
-    uses: fltuna/modsharp-publish-action/.github/workflows/deploy.yml@v1
+    uses: possession-community/modsharp-publish-action/.github/workflows/deploy.yml@v1
     with:
       projects: |
         PluginA
@@ -447,7 +447,7 @@ with:
 ```yaml
 jobs:
   cicd:
-    uses: fltuna/modsharp-publish-action/.github/workflows/deploy.yml@v1
+    uses: possession-community/modsharp-publish-action/.github/workflows/deploy.yml@v1
     with:
       projects: MyPlugin
       main-artifact-name: MyPlugin
@@ -480,7 +480,7 @@ jobs:
 ```yaml
 jobs:
   cicd:
-    uses: fltuna/modsharp-publish-action/.github/workflows/deploy.yml@v1
+    uses: possession-community/modsharp-publish-action/.github/workflows/deploy.yml@v1
     with:
       projects: MyPlugin
       platforms: linux-x64 win-x64
