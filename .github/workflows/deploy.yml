@@ -239,6 +239,7 @@ jobs:
         if: ${{ inputs.extended-artifact-name != '' && inputs.dependencies != '' }}
         env:
           MSD_DEPENDENCIES: ${{ inputs.dependencies }}
+          MSD_PLATFORM: ${{ matrix.platform }}
         run: bash .modsharp-deploy/scripts/download-dependencies.sh
 
       - name: Create extended artifact
