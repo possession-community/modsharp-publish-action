@@ -249,6 +249,7 @@ jobs:
         run: bash .modsharp-deploy/scripts/create-zip.sh
 
       - name: Upload artifacts
+        if: ${{ inputs.main-artifact-name != '' || inputs.extended-artifact-name != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ needs.setup.outputs.is-multi == 'true' && format('release-artifacts-{0}', matrix.platform) || 'release-artifacts' }}
